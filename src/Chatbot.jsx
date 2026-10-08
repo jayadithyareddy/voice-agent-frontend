@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Bot, Send, X, MessageCircle, User } from "lucide-react";
 import "./chatbot.css";
 
-const API_URL = "http://localhost:8080/api";
+const API_URL = "https://voice-agent-backend-production-9cef.up.railway.app/api";
 
 export default function Chatbot() {
   const [open, setOpen] = useState(false);
@@ -237,3 +237,4 @@ export default function Chatbot() {
     </>
   );
 }
+
