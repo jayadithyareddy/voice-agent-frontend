@@ -26,7 +26,7 @@ import CustomerImport from "./CustomerImport";
 import Login from "./Login";
 import Chatbot from "./Chatbot";
 
-const API_URL = "https://voice-agent-backend-production-9cef.up.railway.app/api";
+const API_URL = "https://voice-agent-backend-yzgl.onrender.com/api";
 
 const initialCustomers = [
   {

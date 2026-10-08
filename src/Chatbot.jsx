@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Bot, Send, X, MessageCircle, User } from "lucide-react";
 import "./chatbot.css";
 
-const API_URL = "https://voice-agent-backend-production-9cef.up.railway.app/api";
+const API_URL = "https://voice-agent-backend-yzgl.onrender.com/api";
 
 export default function Chatbot() {
   const [open, setOpen] = useState(false);

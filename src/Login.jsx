@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "./login.css";
 
-const API_URL = "https://voice-agent-backend-production-9cef.up.railway.app/api";
+const API_URL = "https://voice-agent-backend-yzgl.onrender.com/api";
 
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState("");
