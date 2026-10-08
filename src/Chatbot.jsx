@@ -1,30 +1,44 @@
 import { useState } from "react";
+import { Bot, Send, X, MessageCircle, User } from "lucide-react";
+import "./chatbot.css";
 
 const API_URL = "https://voice-agent-backend-yzgl.onrender.com/api";
 
 export default function Chatbot() {
-  const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState([]);
+  const [open, setOpen] = useState(false);
+
+  const [messages, setMessages] = useState([
+    {
+      id: 1,
+      sender: "bot",
+      text: "Hi! I am the DDL LAB AI assistant. How can I help you?",
+    },
+  ]);
+
+  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
   const sendMessage = async (event) => {
     event.preventDefault();
 
-    if (!message.trim() || loading) {
+    const text = input.trim();
+
+    if (!text || loading) {
       return;
     }
 
-    const userMessage = message.trim();
+    const userMessage = {
+      id: Date.now(),
+      sender: "user",
+      text,
+    };
 
-    setMessages((previous) => [
-      ...previous,
-      {
-        role: "user",
-        content: userMessage,
-      },
+    setMessages((current) => [
+      ...current,
+      userMessage,
     ]);
 
-    setMessage("");
+    setInput("");
     setLoading(true);
 
     try {
@@ -34,33 +48,72 @@ export default function Chatbot() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          message: userMessage,
+          message: text,
         }),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.message || "Chatbot request failed");
+        throw new Error("Chatbot API unavailable");
       }
 
-      setMessages((previous) => [
-        ...previous,
+      const data = await response.json();
+
+      setMessages((current) => [
+        ...current,
         {
-          role: "assistant",
-          content:
-            data.message ||
-            data.response ||
+          id: Date.now() + 1,
+          sender: "bot",
+          text:
             data.reply ||
-            "No response received.",
+            data.message ||
+            "I received your message.",
         },
       ]);
     } catch (error) {
-      setMessages((previous) => [
-        ...previous,
+      let reply =
+        "I am currently running in demo mode. Your message was received.";
+
+      const lowerText = text.toLowerCase();
+
+      if (
+        lowerText.includes("hello") ||
+        lowerText.includes("hi")
+      ) {
+        reply =
+          "Hello! Welcome to DDL LAB. How can I help you?";
+      } else if (
+        lowerText.includes("customer")
+      ) {
+        reply =
+          "You can manage customers from the Customers section of the DDL LAB dashboard.";
+      } else if (
+        lowerText.includes("voice")
+      ) {
+        reply =
+          "The DDL LAB Voice Agent is designed to handle customer conversations automatically.";
+      } else if (
+        lowerText.includes("knowledge")
+      ) {
+        reply =
+          "The Knowledge Base stores information that can be used by the AI voice agent.";
+      } else if (
+        lowerText.includes("call")
+      ) {
+        reply =
+          "Call records can be managed through the Voice Agent and Calls backend APIs.";
+      } else if (
+        lowerText.includes("help")
+      ) {
+        reply =
+          "I can help with customers, voice calls, knowledge base, analytics and DDL LAB features.";
+      }
+
+      setMessages((current) => [
+        ...current,
         {
-          role: "assistant",
-          content: error.message || "Unable to connect to the AI assistant.",
+          id: Date.now() + 1,
+          sender: "bot",
+          text: reply,
         },
       ]);
     } finally {
@@ -69,46 +122,121 @@ export default function Chatbot() {
   };
 
   return (
-    <div className="chatbot-container">
-      <div className="chatbot-messages">
-        {messages.length === 0 && (
-          <div className="chatbot-empty">
-            <h3>AI Voice Agent Assistant</h3>
-            <p>Ask me anything about your customers or calls.</p>
-          </div>
-        )}
-
-        {messages.map((item, index) => (
-          <div
-            key={index}
-            className={`chat-message ${
-              item.role === "user" ? "user-message" : "assistant-message"
-            }`}
-          >
-            <div className="chat-message-content">{item.content}</div>
-          </div>
-        ))}
-
-        {loading && (
-          <div className="chat-message assistant-message">
-            <div className="chat-message-content">Thinking...</div>
-          </div>
-        )}
-      </div>
-
-      <form className="chatbot-input-area" onSubmit={sendMessage}>
-        <input
-          type="text"
-          placeholder="Ask the AI assistant..."
-          value={message}
-          onChange={(event) => setMessage(event.target.value)}
-          disabled={loading}
-        />
-
-        <button type="submit" disabled={loading || !message.trim()}>
-          Send
+    <>
+      {!open && (
+        <button
+          className="chatbot-floating-button"
+          onClick={() => setOpen(true)}
+          title="Open DDL LAB AI Chat"
+        >
+          <MessageCircle size={23} />
         </button>
-      </form>
-    </div>
+      )}
+
+      {open && (
+        <div className="chatbot-window">
+
+          <div className="chatbot-header">
+
+            <div className="chatbot-header-info">
+
+              <div className="chatbot-header-icon">
+                <Bot size={20} />
+              </div>
+
+              <div>
+                <strong>
+                  DDL LAB AI
+                </strong>
+
+                <span>
+                  Assistant
+                </span>
+              </div>
+
+            </div>
+
+            <button
+              className="chatbot-close"
+              onClick={() => setOpen(false)}
+            >
+              <X size={18} />
+            </button>
+
+          </div>
+
+          <div className="chatbot-messages">
+
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`chat-message ${
+                  message.sender === "user"
+                    ? "user-message"
+                    : "bot-message"
+                }`}
+              >
+
+                <div className="chat-message-icon">
+                  {message.sender === "user" ? (
+                    <User size={14} />
+                  ) : (
+                    <Bot size={14} />
+                  )}
+                </div>
+
+                <div className="chat-message-text">
+                  {message.text}
+                </div>
+
+              </div>
+            ))}
+
+            {loading && (
+              <div className="chat-message bot-message">
+
+                <div className="chat-message-icon">
+                  <Bot size={14} />
+                </div>
+
+                <div className="chat-typing">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+
+              </div>
+            )}
+
+          </div>
+
+          <form
+            className="chatbot-input-area"
+            onSubmit={sendMessage}
+          >
+
+            <input
+              value={input}
+              onChange={(event) =>
+                setInput(event.target.value)
+              }
+              placeholder="Ask DDL LAB AI..."
+            />
+
+            <button
+              type="submit"
+              disabled={!input.trim() || loading}
+            >
+              <Send size={17} />
+            </button>
+
+          </form>
+
+        </div>
+      )}
+    </>
   );
 }
+
+
+

@@ -1,17 +1,18 @@
 import { useState } from "react";
+import "./login.css";
 
 const API_URL = "https://voice-agent-backend-yzgl.onrender.com/api";
 
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const handleLogin = async (e) => {
+    e.preventDefault();
 
-    setError("");
+    setMessage("");
     setLoading(true);
 
     try {
@@ -28,46 +29,90 @@ export default function Login({ onLogin }) {
 
       const data = await response.json();
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || "Invalid username or password");
+      if (!data.success) {
+        setMessage(data.message || "Login failed");
+        setLoading(false);
+        return;
       }
 
-      onLogin(data);
-    } catch (err) {
-      setError(err.message || "Login failed");
-    } finally {
-      setLoading(false);
+      localStorage.setItem("ddlLabUser", data.name || username);
+
+      onLogin(data.name || username);
+    } catch (error) {
+      setMessage("Cannot connect to Java backend");
     }
+
+    setLoading(false);
   };
 
   return (
     <div className="login-page">
-      <form className="login-card" onSubmit={handleSubmit}>
-        <h1>DDL LAB</h1>
-        <p>Voice Agent Dashboard</p>
+      <div className="login-card">
 
-        <input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
-          required
-        />
+        <div className="login-logo">
+          DDL
+        </div>
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          required
-        />
+        <div className="login-brand">
+          <h1>DDL LAB</h1>
+          <p>AI VOICE AUTOMATION</p>
+        </div>
 
-        {error && <div className="login-error">{error}</div>}
+        <div className="login-heading">
+          <h2>Welcome Back</h2>
+          <p>Sign in to continue to DDL LAB</p>
+        </div>
 
-        <button type="submit" disabled={loading}>
-          {loading ? "Signing in..." : "Login"}
-        </button>
-      </form>
+        <form onSubmit={handleLogin}>
+
+          <div className="login-field">
+            <label>Username</label>
+
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter username"
+              required
+            />
+          </div>
+
+          <div className="login-field">
+            <label>Password</label>
+
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter password"
+              required
+            />
+          </div>
+
+          {message && (
+            <div className="login-error">
+              {message}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="login-button"
+            disabled={loading}
+          >
+            {loading ? "SIGNING IN..." : "SIGN IN"}
+          </button>
+
+        </form>
+
+        <div className="login-footer">
+          DDL LAB © 2026
+        </div>
+
+      </div>
     </div>
   );
 }
+
+
+
