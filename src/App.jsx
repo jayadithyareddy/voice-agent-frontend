@@ -23,7 +23,6 @@ import {
 
 import "./index.css";
 import CustomerImport from "./CustomerImport";
-import Login from "./Login";
 import Chatbot from "./Chatbot";
 
 const API_URL = "https://voice-agent-backend-yzgl.onrender.com/api";
@@ -68,15 +67,8 @@ const emptyCustomer = {
 };
 
 function App() {
-  const [loggedIn, setLoggedIn] = useState(
-    Boolean(localStorage.getItem("ddlLabUser"))
-  );
-
-  const [currentUser, setCurrentUser] = useState(
-    localStorage.getItem("ddlLabUser") || ""
-  );
-
-  const [activePage, setActivePage] = useState("Dashboard");
+  const [currentUser] = useState("AI Voice Tester");
+const [activePage, setActivePage] = useState("Dashboard");
 
   const [customers, setCustomers] = useState(initialCustomers);
 
@@ -97,26 +89,9 @@ function App() {
   const [savingCustomer, setSavingCustomer] = useState(false);
 
   useEffect(() => {
-    if (!loggedIn) {
-      return;
-    }
-
     checkBackend();
     loadCustomers();
-  }, [loggedIn]);
-
-  const handleLogin = (name) => {
-    localStorage.setItem("ddlLabUser", name);
-    setCurrentUser(name);
-    setLoggedIn(true);
-    setActivePage("Dashboard");
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("ddlLabUser");
-    setCurrentUser("");
-    setLoggedIn(false);
-  };
+  }, []);
 
   const checkBackend = async () => {
     try {
@@ -444,10 +419,6 @@ function App() {
     },
   ];
 
-  if (!loggedIn) {
-    return <Login onLogin={handleLogin} />;
-  }
-
   return (
     <div className="app-shell">
 
@@ -460,9 +431,7 @@ function App() {
           </div>
 
           <div>
-            <div className="brand-title">
-              DDL LAB
-            </div>
+            <div className="brand-title">AI Voice Tester</div>
 
             <div className="brand-subtitle">
               AI VOICE AUTOMATION
@@ -528,7 +497,7 @@ function App() {
 
             <div>
               <div className="user-name">
-                {currentUser || "DDL LAB Admin"}
+                AI Voice Tester
               </div>
 
               <div className="user-role">
@@ -536,13 +505,7 @@ function App() {
               </div>
             </div>
 
-            <button
-              className="icon-button"
-              title="Logout"
-              onClick={handleLogout}
-            >
-              <LogOut size={16} />
-            </button>
+            
 
           </div>
 
@@ -690,7 +653,7 @@ function DashboardPage({
           <div>
 
             <div className="hero-label">
-              DDL LAB AI VOICE
+              AI VOICE TESTER
             </div>
 
             <h2>
@@ -782,7 +745,7 @@ function DashboardPage({
             <div className="agent-info">
 
               <strong>
-                DDL LAB Voice Agent
+                AI Voice Tester
               </strong>
 
               <span>
@@ -1491,7 +1454,7 @@ function VoiceAgentPage() {
           </div>
 
           <h2>
-            DDL LAB Voice Agent
+            AI Voice Tester
           </h2>
 
           <p>
