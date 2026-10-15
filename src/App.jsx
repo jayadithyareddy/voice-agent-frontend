@@ -1,2016 +1,353 @@
-import { useEffect, useMemo, useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import {
-  LayoutDashboard,
-  Users,
-  Phone,
-  BarChart3,
-  BookOpen,
-  Settings,
-  Search,
-  Plus,
-  Pencil,
-  Trash2,
-  X,
-  PhoneCall,
-  MessageSquare,
   Activity,
   Bot,
   CheckCircle2,
-  Clock3,
-  TrendingUp,
+  LayoutDashboard,
+  Users,
+  Settings,
+  BookOpen,
   LogOut,
+  RefreshCw,
+  Plus,
+  Trash2,
+  Search,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
-
 import "./index.css";
-import CustomerImport from "./CustomerImport";
-import Chatbot from "./Chatbot";
+import Login from "./Login";
 
 const API_URL = "https://voice-agent-backend-yzgl.onrender.com/api";
-
-const initialCustomers = [
-  {
-    id: 1,
-    name: "Rahul Sharma",
-    phone: "+91 98765 43210",
-    email: "rahul@example.com",
-    company: "Sharma Enterprises",
-    status: "Active",
-    notes: "Interested in premium plan",
-  },
-  {
-    id: 2,
-    name: "Priya Reddy",
-    phone: "+91 99887 66554",
-    email: "priya@example.com",
-    company: "Reddy Solutions",
-    status: "Active",
-    notes: "Follow up next week",
-  },
-  {
-    id: 3,
-    name: "Arjun Kumar",
-    phone: "+91 91234 56789",
-    email: "arjun@example.com",
-    company: "AK Technologies",
-    status: "Pending",
-    notes: "Requested product demo",
-  },
-];
-
-const emptyCustomer = {
-  name: "",
-  phone: "",
-  email: "",
-  company: "",
-  status: "Active",
-  notes: "",
-};
+const USER_KEY = "ddlLabUser";
 
 function App() {
-  const [currentUser] = useState("AI Voice Tester");
-const [activePage, setActivePage] = useState("Dashboard");
-
-  const [customers, setCustomers] = useState(initialCustomers);
-
+  const [user, setUser] = useState(() => localStorage.getItem(USER_KEY) || "");
+  const [page, setPage] = useState("Dashboard");
+  const [online, setOnline] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [customers, setCustomers] = useState([]);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [search, setSearch] = useState("");
+  const [message, setMessage] = useState("");
 
-  const [showCustomerImport, setShowCustomerImport] = useState(false);
-
-  const [showCustomerModal, setShowCustomerModal] = useState(false);
-
-  const [editingCustomer, setEditingCustomer] = useState(null);
-
-  const [customerForm, setCustomerForm] = useState(emptyCustomer);
-
-  const [backendOnline, setBackendOnline] = useState(false);
-
-  const [loadingCustomers, setLoadingCustomers] = useState(false);
-
-  const [savingCustomer, setSavingCustomer] = useState(false);
+  async function checkBackend() {
+    setLoading(true);
+    try {
+      const response = await fetch(API_URL + "/health");
+      setOnline(response.ok);
+    } catch {
+      setOnline(false);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    checkBackend();
-    loadCustomers();
-  }, []);
+    if (user) checkBackend();
+  }, [user]);
 
-  const checkBackend = async () => {
-    try {
-      const response = await fetch(`${API_URL}/health`);
+  function login(username) {
+    const value = String(username || "User").trim();
+    localStorage.setItem(USER_KEY, value);
+    setUser(value);
+  }
 
-      if (!response.ok) {
-        throw new Error("Backend unavailable");
-      }
+  function logout() {
+    localStorage.removeItem(USER_KEY);
+    setUser("");
+    setPage("Dashboard");
+  }
 
-      setBackendOnline(true);
-    } catch {
-      setBackendOnline(false);
-    }
-  };
-
-  const loadCustomers = async () => {
-    setLoadingCustomers(true);
-
-    try {
-      const response = await fetch(`${API_URL}/customers`);
-
-      if (!response.ok) {
-        throw new Error("Failed to load customers");
-      }
-
-      const data = await response.json();
-
-      if (Array.isArray(data)) {
-        setCustomers(data);
-      } else if (data.customers && Array.isArray(data.customers)) {
-        setCustomers(data.customers);
-      }
-
-      setBackendOnline(true);
-    } catch (error) {
-      console.log("Using local customer data:", error.message);
-      setBackendOnline(false);
-    } finally {
-      setLoadingCustomers(false);
-    }
-  };
-
-  const importCustomers = async (importedCustomers) => {
-    if (
-      !Array.isArray(importedCustomers) ||
-      importedCustomers.length === 0
-    ) {
-      return;
-    }
-
-    try {
-      const savedCustomers = [];
-
-      for (const customer of importedCustomers) {
-        const response = await fetch(`${API_URL}/customers`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            name: customer.name || "",
-            phone: customer.phone || "",
-            email: customer.email || "",
-            company: customer.company || "",
-            status: customer.status || "Active",
-            notes: customer.notes || "",
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to save imported customer");
-        }
-
-        const data = await response.json();
-
-        const savedCustomer = data.customer || data;
-
-        if (savedCustomer) {
-          savedCustomers.push(savedCustomer);
-        }
-      }
-
-      if (savedCustomers.length > 0) {
-        setCustomers((current) => [
-          ...savedCustomers,
-          ...current,
-        ]);
-      }
-
-      setShowCustomerImport(false);
-      setBackendOnline(true);
-
-      alert(
-        `${savedCustomers.length} customer(s) imported successfully.`
-      );
-    } catch (error) {
-      console.error("Import error:", error);
-
-      alert(
-        "Import failed. Make sure the Java backend is running on port 8080."
-      );
-    }
-  };
-
-  const openAddCustomer = () => {
-    setEditingCustomer(null);
-    setCustomerForm({ ...emptyCustomer });
-    setShowCustomerModal(true);
-  };
-
-  const openEditCustomer = (customer) => {
-    setEditingCustomer(customer);
-
-    setCustomerForm({
-      name: customer.name || "",
-      phone: customer.phone || "",
-      email: customer.email || "",
-      company: customer.company || "",
-      status: customer.status || "Active",
-      notes: customer.notes || "",
-    });
-
-    setShowCustomerModal(true);
-  };
-
-  const closeCustomerModal = () => {
-    if (savingCustomer) {
-      return;
-    }
-
-    setShowCustomerModal(false);
-    setEditingCustomer(null);
-    setCustomerForm({ ...emptyCustomer });
-  };
-
-  const handleFormChange = (event) => {
-    const { name, value } = event.target;
-
-    setCustomerForm((current) => ({
-      ...current,
-      [name]: value,
-    }));
-  };
-
-  const saveCustomer = async (event) => {
+  function addCustomer(event) {
     event.preventDefault();
-
-    if (
-      !customerForm.name.trim() ||
-      !customerForm.phone.trim()
-    ) {
-      alert("Name and phone are required.");
+    if (!name.trim() || !email.trim()) {
+      setMessage("Enter a name and email.");
       return;
     }
 
-    setSavingCustomer(true);
-
-    try {
-      const isEditing = Boolean(editingCustomer);
-
-      const endpoint = isEditing
-        ? `${API_URL}/customers/${editingCustomer.id}`
-        : `${API_URL}/customers`;
-
-      const response = await fetch(endpoint, {
-        method: isEditing ? "PUT" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: customerForm.name.trim(),
-          phone: customerForm.phone.trim(),
-          email: customerForm.email.trim(),
-          company: customerForm.company.trim(),
-          status: customerForm.status,
-          notes: customerForm.notes.trim(),
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Backend request failed");
-      }
-
-      const data = await response.json();
-
-      const savedCustomer = data.customer || data;
-
-      if (!savedCustomer) {
-        throw new Error("Unable to save customer");
-      }
-
-      if (isEditing) {
-        setCustomers((current) =>
-          current.map((customer) =>
-            customer.id === savedCustomer.id
-              ? savedCustomer
-              : customer
-          )
-        );
-      } else {
-        setCustomers((current) => [
-          savedCustomer,
-          ...current,
-        ]);
-      }
-
-      setBackendOnline(true);
-
-      closeCustomerModal();
-    } catch (error) {
-      console.error(error);
-
-      const localCustomer = {
-        ...customerForm,
-        id: editingCustomer?.id || Date.now(),
-      };
-
-      if (editingCustomer) {
-        setCustomers((current) =>
-          current.map((customer) =>
-            customer.id === editingCustomer.id
-              ? localCustomer
-              : customer
-          )
-        );
-      } else {
-        setCustomers((current) => [
-          localCustomer,
-          ...current,
-        ]);
-      }
-
-      closeCustomerModal();
-    } finally {
-      setSavingCustomer(false);
-    }
-  };
-
-  const deleteCustomer = async (customer) => {
-    const confirmed = window.confirm(
-      `Delete ${customer.name}? This action cannot be undone.`
+    setCustomers((previous) =>
+      previous.concat({
+        id: Date.now(),
+        name: name.trim(),
+        email: email.trim(),
+      })
     );
+    setName("");
+    setEmail("");
+    setMessage("Customer added.");
+  }
 
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      if (backendOnline && customer.id) {
-        const response = await fetch(
-          `${API_URL}/customers/${customer.id}`,
-          {
-            method: "DELETE",
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Delete request failed");
-        }
-      }
-    } catch (error) {
-      console.error(error);
-    }
-
-    setCustomers((current) =>
-      current.filter(
-        (item) => item.id !== customer.id
-      )
+  function removeCustomer(id) {
+    setCustomers((previous) =>
+      previous.filter((customer) => customer.id !== id)
     );
-  };
+  }
 
-  const filteredCustomers = useMemo(() => {
-    const query = search.trim().toLowerCase();
+  const filteredCustomers = customers.filter((customer) =>
+    (customer.name + " " + customer.email)
+      .toLowerCase()
+      .includes(search.toLowerCase())
+  );
 
-    if (!query) {
-      return customers;
-    }
+  if (!user) return <Login onLogin={login} />;
 
-    return customers.filter((customer) =>
-      [
-        customer.name,
-        customer.phone,
-        customer.email,
-        customer.company,
-        customer.status,
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(query)
-    );
-  }, [customers, search]);
-
-  const activeCustomers = customers.filter(
-    (customer) => customer.status === "Active"
-  ).length;
-
-  const pendingCustomers = customers.filter(
-    (customer) => customer.status === "Pending"
-  ).length;
-
-  const navigation = [
-    {
-      label: "Dashboard",
-      icon: LayoutDashboard,
-    },
-    {
-      label: "Customers",
-      icon: Users,
-    },
-    {
-      label: "Voice Agent",
-      icon: Phone,
-    },
-    {
-      label: "Analytics",
-      icon: BarChart3,
-    },
-    {
-      label: "Knowledge Base",
-      icon: BookOpen,
-    },
-    {
-      label: "Settings",
-      icon: Settings,
-    },
+  const pages = [
+    { label: "Dashboard", icon: LayoutDashboard },
+    { label: "Voice Agent", icon: Bot },
+    { label: "Customers", icon: Users },
+    { label: "Knowledge Base", icon: BookOpen },
+    { label: "Settings", icon: Settings },
   ];
 
   return (
     <div className="app-shell">
-
       <aside className="sidebar">
-
         <div className="brand">
-
-          <div className="brand-icon">
-            <Bot size={22} />
-          </div>
-
+          <Bot size={28} />
           <div>
-            <div className="brand-title">AI Voice Tester</div>
-
-            <div className="brand-subtitle">
-              AI VOICE AUTOMATION
-            </div>
+            <h2>Voice AI</h2>
+            <span>Management Console</span>
           </div>
-
         </div>
 
-        <nav className="sidebar-nav">
-
-          {navigation.map((item) => {
-
+        <nav className="navigation">
+          {pages.map((item) => {
             const Icon = item.icon;
-
-            const isActive =
-              activePage === item.label;
-
             return (
               <button
+                type="button"
                 key={item.label}
-                className={`nav-item ${
-                  isActive ? "active" : ""
-                }`}
-                onClick={() =>
-                  setActivePage(item.label)
+                className={
+                  page === item.label ? "nav-item nav-active" : "nav-item"
                 }
+                onClick={() => {
+                  setPage(item.label);
+                  setMessage("");
+                }}
               >
                 <Icon size={19} />
                 <span>{item.label}</span>
               </button>
             );
           })}
-
         </nav>
 
         <div className="sidebar-bottom">
-
-          <div className="backend-status">
-
-            <span
-              className={`status-dot ${
-                backendOnline
-                  ? "online"
-                  : "offline"
-              }`}
-            />
-
-            <span>
-              {backendOnline
-                ? "Backend Online"
-                : "Demo Mode"}
-            </span>
-
-          </div>
-
-          <div className="user-card">
-
-            <div className="user-avatar">
-              {(currentUser || "A")
-                .charAt(0)
-                .toUpperCase()}
-            </div>
-
-            <div>
-              <div className="user-name">
-                AI Voice Tester
-              </div>
-
-              <div className="user-role">
-                Administrator
-              </div>
-            </div>
-
-            
-
-          </div>
-
+          <strong>{user}</strong>
+          <button
+            type="button"
+            className="nav-item logout-button"
+            onClick={logout}
+          >
+            <LogOut size={18} /> Sign out
+          </button>
         </div>
-
       </aside>
 
-      <main className="main-area">
-
+      <main className="main-content">
         <header className="topbar">
-
           <div>
-
-            <h1>
-              {activePage}
-            </h1>
-
-            <p>
-              {activePage === "Dashboard" &&
-                "Manage your AI customer engagement system"}
-
-              {activePage === "Customers" &&
-                "Manage customer contacts and conversations"}
-
-              {activePage === "Voice Agent" &&
-                "Monitor and manage your AI voice agent"}
-
-              {activePage === "Analytics" &&
-                "Track customer engagement performance"}
-
-              {activePage === "Knowledge Base" &&
-                "Manage information used by your AI agent"}
-
-              {activePage === "Settings" &&
-                "Configure your AI customer engagement system"}
-            </p>
-
+            <h1>{page}</h1>
+            <p>Welcome back, {user}</p>
           </div>
-
           <div className="topbar-actions">
-
-            <div className="topbar-status">
-              <span className="live-dot" />
-              System Active
-            </div>
-
+            <span
+              className={
+                online ? "status-pill status-online" : "status-pill status-offline"
+              }
+            >
+              {online ? <Wifi size={15} /> : <WifiOff size={15} />}
+              {online ? "Backend online" : "Backend offline"}
+            </span>
+            <button
+              type="button"
+              className="icon-button"
+              onClick={checkBackend}
+              disabled={loading}
+              aria-label="Refresh backend status"
+            >
+              <RefreshCw size={18} />
+            </button>
           </div>
-
         </header>
 
         <div className="page-content">
+          {page === "Dashboard" && (
+            <>
+              <section className="welcome-banner">
+                <div>
+                  <span className="eyebrow">OVERVIEW</span>
+                  <h2>Your AI voice agent workspace</h2>
+                  <p>Manage your service and customers in one place.</p>
+                </div>
+                <Bot size={45} />
+              </section>
 
-          {activePage === "Dashboard" && (
-            <DashboardPage
-              customers={customers}
-              activeCustomers={activeCustomers}
-              pendingCustomers={pendingCustomers}
-              setActivePage={setActivePage}
-            />
-          )}
+              <section className="stats-grid">
+                <article className="stat-card">
+                  <Users size={24} />
+                  <p>Total Customers</p>
+                  <h3>{customers.length}</h3>
+                </article>
+                <article className="stat-card">
+                  <Activity size={24} />
+                  <p>Backend Status</p>
+                  <h3>{online ? "Online" : "Offline"}</h3>
+                </article>
+                <article className="stat-card">
+                  <BookOpen size={24} />
+                  <p>Knowledge Base</p>
+                  <h3>Available to configure</h3>
+                </article>
+                <article className="stat-card">
+                  <Bot size={24} />
+                  <p>Voice Agent</p>
+                  <h3>Dashboard ready</h3>
+                </article>
+              </section>
 
-          {activePage === "Customers" && (
-            <CustomersPage
-              customers={customers}
-              filteredCustomers={filteredCustomers}
-              search={search}
-              setSearch={setSearch}
-              loadingCustomers={loadingCustomers}
-              backendOnline={backendOnline}
-              openAddCustomer={openAddCustomer}
-              openEditCustomer={openEditCustomer}
-              deleteCustomer={deleteCustomer}
-              loadCustomers={loadCustomers}
-              openCustomerImport={() =>
-                setShowCustomerImport(true)
-              }
-            />
-          )}
-
-          {activePage === "Voice Agent" && (
-            <VoiceAgentPage />
-          )}
-
-          {activePage === "Analytics" && (
-            <AnalyticsPage
-              customers={customers}
-            />
-          )}
-
-          {activePage === "Knowledge Base" && (
-            <KnowledgeBasePage />
-          )}
-
-          {activePage === "Settings" && (
-            <SettingsPage />
-          )}
-
-        </div>
-
-      </main>
-
-      {showCustomerImport && (
-        <CustomerImport
-          onClose={() =>
-            setShowCustomerImport(false)
-          }
-          onImport={importCustomers}
-        />
-      )}
-
-      {showCustomerModal && (
-        <CustomerModal
-          customer={customerForm}
-          editing={Boolean(editingCustomer)}
-          saving={savingCustomer}
-          onChange={handleFormChange}
-          onClose={closeCustomerModal}
-          onSubmit={saveCustomer}
-        />
-      )}
-
-      <Chatbot />
-
-    </div>
-  );
-}
-
-function DashboardPage({
-  customers,
-  activeCustomers,
-  pendingCustomers,
-  setActivePage,
-}) {
-  return (
-    <div className="dashboard-page">
-
-      <section className="hero-banner">
-
-        <div className="hero-content">
-
-          <div className="hero-icon">
-            <Bot size={28} />
-          </div>
-
-          <div>
-
-            <div className="hero-label">
-              AI VOICE TESTER
-            </div>
-
-            <h2>
-              Your AI agent is ready to talk
-            </h2>
-
-            <p>
-              Handle customer calls automatically,
-              qualify leads, answer questions and
-              create follow-ups.
-            </p>
-
-          </div>
-
-        </div>
-
-        <button
-          className="primary-button"
-          onClick={() =>
-            setActivePage("Voice Agent")
-          }
-        >
-          <PhoneCall size={17} />
-          Open Voice Agent
-        </button>
-
-      </section>
-
-      <section className="stat-grid">
-
-        <StatCard
-          icon={<Users size={21} />}
-          label="Total Customers"
-          value={customers.length}
-          trend="+12%"
-        />
-
-        <StatCard
-          icon={<CheckCircle2 size={21} />}
-          label="Active Customers"
-          value={activeCustomers}
-          trend="+8%"
-        />
-
-        <StatCard
-          icon={<PhoneCall size={21} />}
-          label="Calls Today"
-          value="24"
-          trend="+18%"
-        />
-
-        <StatCard
-          icon={<TrendingUp size={21} />}
-          label="Success Rate"
-          value="94%"
-          trend="+4.2%"
-        />
-
-      </section>
-
-      <section className="dashboard-grid">
-
-        <div className="panel">
-
-          <div className="panel-header">
-
-            <div>
-              <h3>
-                AI Agent Overview
-              </h3>
-
-              <p>
-                Current agent activity
-              </p>
-            </div>
-
-            <span className="badge success">
-              Active
-            </span>
-
-          </div>
-
-          <div className="agent-overview">
-
-            <div className="agent-circle">
-              <Bot size={34} />
-            </div>
-
-            <div className="agent-info">
-
-              <strong>
-                AI Voice Tester
-              </strong>
-
-              <span>
-                Ready for incoming conversations
-              </span>
-
-            </div>
-
-          </div>
-
-          <div className="mini-metrics">
-
-            <div>
-              <span>Calls</span>
-              <strong>24</strong>
-            </div>
-
-            <div>
-              <span>Avg. Duration</span>
-              <strong>3m 42s</strong>
-            </div>
-
-            <div>
-              <span>Resolved</span>
-              <strong>22</strong>
-            </div>
-
-          </div>
-
-        </div>
-
-        <div className="panel">
-
-          <div className="panel-header">
-
-            <div>
-              <h3>
-                Recent Customers
-              </h3>
-
-              <p>
-                Latest customer activity
-              </p>
-            </div>
-
-            <button
-              className="text-button"
-              onClick={() =>
-                setActivePage("Customers")
-              }
-            >
-              View all
-            </button>
-
-          </div>
-
-          <div className="recent-list">
-
-            {customers.slice(0, 4).map(
-              (customer) => (
-
-                <div
-                  className="recent-customer"
-                  key={customer.id}
+              <section className="panel">
+                <h2>System health</h2>
+                <p>
+                  {online
+                    ? "Backend health check succeeded."
+                    : "The backend could not be reached. Check the service and API URL."}
+                </p>
+                {online ? (
+                  <CheckCircle2 size={22} />
+                ) : (
+                  <WifiOff size={22} />
+                )}
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={checkBackend}
                 >
-
-                  <div className="customer-avatar">
-                    {customer.name
-                      ?.charAt(0)
-                      ?.toUpperCase() || "C"}
-                  </div>
-
-                  <div className="recent-customer-info">
-
-                    <strong>
-                      {customer.name}
-                    </strong>
-
-                    <span>
-                      {customer.company ||
-                        customer.phone}
-                    </span>
-
-                  </div>
-
-                  <span
-                    className={`badge ${
-                      customer.status === "Active"
-                        ? "success"
-                        : "warning"
-                    }`}
-                  >
-                    {customer.status}
-                  </span>
-
-                </div>
-              )
-            )}
-
-            {customers.length === 0 && (
-              <div className="empty-state">
-                No customers yet.
-              </div>
-            )}
-
-          </div>
-
-        </div>
-
-      </section>
-
-      <section className="panel">
-
-        <div className="panel-header">
-
-          <div>
-            <h3>
-              Quick Actions
-            </h3>
-
-            <p>
-              Common tasks
-            </p>
-          </div>
-
-        </div>
-
-        <div className="quick-actions">
-
-          <button
-            className="quick-action"
-            onClick={() =>
-              setActivePage("Customers")
-            }
-          >
-            <Users size={20} />
-
-            <span>
-              <strong>
-                Manage Customers
-              </strong>
-
-              <small>
-                Add, edit and manage customers
-              </small>
-            </span>
-
-          </button>
-
-          <button
-            className="quick-action"
-            onClick={() =>
-              setActivePage("Voice Agent")
-            }
-          >
-            <Phone size={20} />
-
-            <span>
-              <strong>
-                Test Voice Agent
-              </strong>
-
-              <small>
-                Start a demo conversation
-              </small>
-            </span>
-
-          </button>
-
-          <button
-            className="quick-action"
-            onClick={() =>
-              setActivePage("Analytics")
-            }
-          >
-            <BarChart3 size={20} />
-
-            <span>
-              <strong>
-                View Analytics
-              </strong>
-
-              <small>
-                Check performance metrics
-              </small>
-            </span>
-
-          </button>
-
-        </div>
-
-      </section>
-
-    </div>
-  );
-}
-
-function CustomersPage({
-  customers,
-  filteredCustomers,
-  search,
-  setSearch,
-  loadingCustomers,
-  backendOnline,
-  openAddCustomer,
-  openEditCustomer,
-  deleteCustomer,
-  loadCustomers,
-  openCustomerImport,
-}) {
-  return (
-    <div className="customers-page">
-
-      <div className="page-toolbar">
-
-        <div>
-          <h2>
-            Customers
-          </h2>
-
-          <p>
-            {customers.length} customer records
-          </p>
-        </div>
-
-        <div className="toolbar-right">
-
-          <button
-            className="secondary-button"
-            onClick={openCustomerImport}
-          >
-            Import Customer
-          </button>
-
-          <button
-            className="primary-button"
-            onClick={openAddCustomer}
-          >
-            <Plus size={18} />
-            Add Customer
-          </button>
-
-        </div>
-
-      </div>
-
-      <div className="customer-toolbar panel">
-
-        <div className="search-box">
-
-          <Search size={18} />
-
-          <input
-            type="text"
-            placeholder="Search customers..."
-            value={search}
-            onChange={(event) =>
-              setSearch(event.target.value)
-            }
-          />
-
-        </div>
-
-        <div className="toolbar-right">
-
-          <span
-            className={`connection-label ${
-              backendOnline
-                ? "connected"
-                : "disconnected"
-            }`}
-          >
-            <span className="status-dot" />
-
-            {backendOnline
-              ? "Database connected"
-              : "Local demo data"}
-          </span>
-
-          <button
-            className="secondary-button"
-            onClick={loadCustomers}
-          >
-            Refresh
-          </button>
-
-        </div>
-
-      </div>
-
-      <div className="panel customer-table-panel">
-
-        <div className="table-wrapper">
-
-          <table className="customer-table">
-
-            <thead>
-
-              <tr>
-                <th>Customer</th>
-                <th>Phone</th>
-                <th>Company</th>
-                <th>Status</th>
-                <th>Notes</th>
-                <th>Actions</th>
-              </tr>
-
-            </thead>
-
-            <tbody>
-
-              {loadingCustomers ? (
-
-                <tr>
-                  <td
-                    colSpan="6"
-                    className="table-empty"
-                  >
-                    Loading customers...
-                  </td>
-                </tr>
-
-              ) : filteredCustomers.length === 0 ? (
-
-                <tr>
-                  <td
-                    colSpan="6"
-                    className="table-empty"
-                  >
-                    No customers found.
-                  </td>
-                </tr>
-
-              ) : (
-
-                filteredCustomers.map(
-                  (customer) => (
-
-                    <tr key={customer.id}>
-
-                      <td>
-
-                        <div className="table-customer">
-
-                          <div className="customer-avatar">
-                            {customer.name
-                              ?.charAt(0)
-                              ?.toUpperCase() || "C"}
-                          </div>
-
-                          <div>
-
-                            <strong>
-                              {customer.name}
-                            </strong>
-
-                            <span>
-                              {customer.email ||
-                                "No email"}
-                            </span>
-
-                          </div>
-
-                        </div>
-
-                      </td>
-
-                      <td>
-                        {customer.phone}
-                      </td>
-
-                      <td>
-                        {customer.company || "—"}
-                      </td>
-
-                      <td>
-
-                        <span
-                          className={`badge ${
-                            customer.status === "Active"
-                              ? "success"
-                              : "warning"
-                          }`}
-                        >
-                          {customer.status}
-                        </span>
-
-                      </td>
-
-                      <td className="notes-cell">
-                        {customer.notes || "—"}
-                      </td>
-
-                      <td>
-
-                        <div className="table-actions">
-
-                          <button
-                            className="icon-button"
-                            title="Call"
-                            onClick={() =>
-                              (window.location.href =
-                                `tel:${customer.phone}`)
-                            }
-                          >
-                            <PhoneCall size={16} />
-                          </button>
-
-                          <button
-                            className="icon-button"
-                            title="SMS"
-                            onClick={() =>
-                              (window.location.href =
-                                `sms:${customer.phone}`)
-                            }
-                          >
-                            <MessageSquare size={16} />
-                          </button>
-
-                          <button
-                            className="icon-button"
-                            title="Edit"
-                            onClick={() =>
-                              openEditCustomer(customer)
-                            }
-                          >
-                            <Pencil size={16} />
-                          </button>
-
-                          <button
-                            className="icon-button danger"
-                            title="Delete"
-                            onClick={() =>
-                              deleteCustomer(customer)
-                            }
-                          >
-                            <Trash2 size={16} />
-                          </button>
-
-                        </div>
-
-                      </td>
-
-                    </tr>
-
-                  )
-                )
-
-              )}
-
-            </tbody>
-
-          </table>
-
-        </div>
-
-      </div>
-
-    </div>
-  );
-}
-
-function CustomerModal({
-  customer,
-  editing,
-  saving,
-  onChange,
-  onClose,
-  onSubmit,
-}) {
-  return (
-    <div
-      className="modal-backdrop"
-      onMouseDown={onClose}
-    >
-
-      <div
-        className="modal-card"
-        onMouseDown={(event) =>
-          event.stopPropagation()
-        }
-      >
-
-        <div className="modal-header">
-
-          <div>
-
-            <h2>
-              {editing
-                ? "Edit Customer"
-                : "Add Customer"}
-            </h2>
-
-            <p>
-              {editing
-                ? "Update customer information"
-                : "Create a new customer record"}
-            </p>
-
-          </div>
-
-          <button
-            className="icon-button"
-            onClick={onClose}
-          >
-            <X size={19} />
-          </button>
-
-        </div>
-
-        <form onSubmit={onSubmit}>
-
-          <div className="form-grid">
-
-            <label className="form-field">
-
-              <span>
-                Name *
-              </span>
-
-              <input
-                name="name"
-                value={customer.name}
-                onChange={onChange}
-                placeholder="Customer name"
-                required
-              />
-
-            </label>
-
-            <label className="form-field">
-
-              <span>
-                Phone *
-              </span>
-
-              <input
-                name="phone"
-                value={customer.phone}
-                onChange={onChange}
-                placeholder="+91 98765 43210"
-                required
-              />
-
-            </label>
-
-            <label className="form-field">
-
-              <span>
-                Email
-              </span>
-
-              <input
-                name="email"
-                type="email"
-                value={customer.email}
-                onChange={onChange}
-                placeholder="customer@example.com"
-              />
-
-            </label>
-
-            <label className="form-field">
-
-              <span>
-                Company
-              </span>
-
-              <input
-                name="company"
-                value={customer.company}
-                onChange={onChange}
-                placeholder="Company name"
-              />
-
-            </label>
-
-            <label className="form-field">
-
-              <span>
-                Status
-              </span>
-
-              <select
-                name="status"
-                value={customer.status}
-                onChange={onChange}
-              >
-
-                <option value="Active">
-                  Active
-                </option>
-
-                <option value="Pending">
-                  Pending
-                </option>
-
-                <option value="Inactive">
-                  Inactive
-                </option>
-
-              </select>
-
-            </label>
-
-            <label className="form-field full-width">
-
-              <span>
-                Notes
-              </span>
-
-              <textarea
-                name="notes"
-                value={customer.notes}
-                onChange={onChange}
-                placeholder="Add customer notes..."
-                rows="4"
-              />
-
-            </label>
-
-          </div>
-
-          <div className="modal-footer">
-
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={onClose}
-              disabled={saving}
-            >
-              Cancel
-            </button>
-
-            <button
-              type="submit"
-              className="primary-button"
-              disabled={saving}
-            >
-              {saving
-                ? "Saving..."
-                : editing
-                ? "Save Changes"
-                : "Add Customer"}
-            </button>
-
-          </div>
-
-        </form>
-
-      </div>
-
-    </div>
-  );
-}
-
-function StatCard({
-  icon,
-  label,
-  value,
-  trend,
-}) {
-  return (
-    <div className="stat-card">
-
-      <div className="stat-icon">
-        {icon}
-      </div>
-
-      <div className="stat-content">
-
-        <span>
-          {label}
-        </span>
-
-        <strong>
-          {value}
-        </strong>
-
-        <small>
-          <TrendingUp size={13} />
-          {trend} this month
-        </small>
-
-      </div>
-
-    </div>
-  );
-}
-
-function VoiceAgentPage() {
-  return (
-    <div className="voice-page">
-
-      <section className="voice-grid">
-
-        <div className="panel voice-agent-card">
-
-          <div className="voice-status">
-            <span className="live-dot" />
-            LIVE AGENT
-          </div>
-
-          <div className="voice-orb">
-            <Bot size={52} />
-          </div>
-
-          <h2>
-            AI Voice Tester
-          </h2>
-
-          <p>
-            Your AI voice agent is configured
-            and ready to handle customer
-            conversations.
-          </p>
-
-          <button className="primary-button">
-            <PhoneCall size={18} />
-            Start Test Call
-          </button>
-
-        </div>
-
-        <div className="panel">
-
-          <div className="panel-header">
-
-            <div>
-              <h3>
-                Agent Performance
-              </h3>
-
-              <p>
-                Today's activity
-              </p>
-            </div>
-
-          </div>
-
-          <div className="performance-list">
-
-            <div className="performance-item">
-              <PhoneCall size={19} />
-              <span>Calls handled</span>
-              <strong>24</strong>
-            </div>
-
-            <div className="performance-item">
-              <Clock3 size={19} />
-              <span>Average duration</span>
-              <strong>3m 42s</strong>
-            </div>
-
-            <div className="performance-item">
-              <CheckCircle2 size={19} />
-              <span>Successfully resolved</span>
-              <strong>22</strong>
-            </div>
-
-            <div className="performance-item">
-              <Activity size={19} />
-              <span>Customer satisfaction</span>
-              <strong>94%</strong>
-            </div>
-
-          </div>
-
-        </div>
-
-      </section>
-
-      <section className="panel">
-
-        <div className="panel-header">
-
-          <div>
-            <h3>
-              Recent Calls
-            </h3>
-
-            <p>
-              Latest AI agent conversations
-            </p>
-          </div>
-
-        </div>
-
-        <div className="call-list">
-
-          {[
-            ["Rahul Sharma", "3m 12s", "Resolved"],
-            ["Priya Reddy", "4m 08s", "Resolved"],
-            ["Arjun Kumar", "2m 51s", "Follow-up"],
-          ].map(
-            ([name, duration, status]) => (
-
-              <div
-                className="call-row"
-                key={name}
-              >
-
-                <div className="customer-avatar">
-                  {name.charAt(0)}
-                </div>
-
-                <div className="call-info">
-
-                  <strong>
-                    {name}
-                  </strong>
-
-                  <span>
-                    Voice conversation
-                  </span>
-
-                </div>
-
-                <span>
-                  {duration}
-                </span>
-
-                <span
-                  className={`badge ${
-                    status === "Resolved"
-                      ? "success"
-                      : "warning"
-                  }`}
-                >
-                  {status}
-                </span>
-
-              </div>
-
-            )
-          )}
-
-        </div>
-
-      </section>
-
-    </div>
-  );
-}
-
-function AnalyticsPage({ customers }) {
-  return (
-    <div className="analytics-page">
-
-      <section className="analytics-grid">
-
-        <StatCard
-          icon={<PhoneCall size={21} />}
-          label="Total Calls"
-          value="1,248"
-          trend="+18%"
-        />
-
-        <StatCard
-          icon={<CheckCircle2 size={21} />}
-          label="Resolved"
-          value="1,176"
-          trend="+14%"
-        />
-
-        <StatCard
-          icon={<Clock3 size={21} />}
-          label="Avg. Call Time"
-          value="3m 42s"
-          trend="-8%"
-        />
-
-        <StatCard
-          icon={<TrendingUp size={21} />}
-          label="Success Rate"
-          value="94%"
-          trend="+4.2%"
-        />
-
-      </section>
-
-      <section className="analytics-grid-large">
-
-        <div className="panel chart-panel">
-
-          <div className="panel-header">
-
-            <div>
-              <h3>
-                Call Activity
-              </h3>
-
-              <p>
-                Calls handled over the last 7 days
-              </p>
-            </div>
-
-          </div>
-
-          <div className="fake-chart">
-
-            {[42, 58, 51, 76, 68, 88, 94].map(
-              (height, index) => (
-
-                <div
-                  className="chart-column"
-                  key={index}
-                >
-
-                  <div
-                    className="chart-bar"
-                    style={{
-                      height: `${height}%`,
-                    }}
-                  />
-
-                  <span>
-                    {
-                      [
-                        "Mon",
-                        "Tue",
-                        "Wed",
-                        "Thu",
-                        "Fri",
-                        "Sat",
-                        "Sun",
-                      ][index]
-                    }
-                  </span>
-
-                </div>
-
-              )
-            )}
-
-          </div>
-
-        </div>
-
-        <div className="panel">
-
-          <div className="panel-header">
-
-            <div>
-              <h3>
-                Customer Overview
-              </h3>
-
-              <p>
-                Current customer base
-              </p>
-            </div>
-
-          </div>
-
-          <div className="overview-number">
-            {customers.length}
-          </div>
-
-          <div className="overview-label">
-            Total customers
-          </div>
-
-          <div className="overview-bars">
-
-            <div>
-              <span>
-                Active
-              </span>
-
-              <strong>
-                {
-                  customers.filter(
-                    (customer) =>
-                      customer.status === "Active"
-                  ).length
-                }
-              </strong>
-            </div>
-
-            <div>
-              <span>
-                Pending
-              </span>
-
-              <strong>
-                {
-                  customers.filter(
-                    (customer) =>
-                      customer.status === "Pending"
-                  ).length
-                }
-              </strong>
-            </div>
-
-          </div>
-
-        </div>
-
-      </section>
-
-    </div>
-  );
-}
-
-function KnowledgeBasePage() {
-  const articles = [
-    [
-      "Company Information",
-      "Business details and company information",
-    ],
-    [
-      "Products & Services",
-      "Product catalog and service information",
-    ],
-    [
-      "FAQs",
-      "Frequently asked customer questions",
-    ],
-    [
-      "Policies",
-      "Returns, support and business policies",
-    ],
-  ];
-
-  return (
-    <div className="knowledge-page">
-
-      <div className="page-toolbar">
-
-        <div>
-
-          <h2>
-            Knowledge Base
-          </h2>
-
-          <p>
-            Information available to your AI agent
-          </p>
-
-        </div>
-
-        <button className="primary-button">
-
-          <Plus size={18} />
-
-          Add Knowledge
-
-        </button>
-
-      </div>
-
-      <div className="knowledge-grid">
-
-        {articles.map(
-          ([title, description], index) => (
-
-            <div
-              className="panel knowledge-card"
-              key={title}
-            >
-
-              <div className="knowledge-icon">
-                <BookOpen size={22} />
-              </div>
-
-              <h3>
-                {title}
-              </h3>
-
-              <p>
-                {description}
-              </p>
-
-              <div className="knowledge-footer">
-
-                <span>
-                  {index + 3} documents
-                </span>
-
-                <button className="text-button">
-                  Manage
+                  Check connection
                 </button>
+              </section>
+            </>
+          )}
 
+          {page === "Voice Agent" && (
+            <section className="panel">
+              <Bot size={30} />
+              <h2>Voice Agent</h2>
+              <p>Backend endpoint: {API_URL + "/health"}</p>
+              <p>{online ? "Connected" : "Not connected"}</p>
+              <button
+                type="button"
+                className="primary-button"
+                onClick={checkBackend}
+              >
+                Test connection
+              </button>
+            </section>
+          )}
+
+          {page === "Customers" && (
+            <section className="panel">
+              <h2>Customer Management</h2>
+              <form className="customer-form" onSubmit={addCustomer}>
+                <input
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="Customer name"
+                  aria-label="Customer name"
+                />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="Customer email"
+                  aria-label="Customer email"
+                />
+                <button type="submit" className="primary-button">
+                  <Plus size={17} /> Add customer
+                </button>
+              </form>
+
+              {message && <p>{message}</p>}
+
+              <div className="search-box">
+                <Search size={17} />
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search customers"
+                  aria-label="Search customers"
+                />
               </div>
 
-            </div>
+              <div className="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredCustomers.map((customer) => (
+                      <tr key={customer.id}>
+                        <td>{customer.name}</td>
+                        <td>{customer.email}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="delete-button"
+                            onClick={() => removeCustomer(customer.id)}
+                            aria-label={"Delete " + customer.name}
+                          >
+                            <Trash2 size={17} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredCustomers.length === 0 && (
+                      <tr>
+                        <td colSpan="3">No customers found.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
 
-          )
-        )}
+          {page === "Knowledge Base" && (
+            <section className="panel">
+              <BookOpen size={30} />
+              <h2>Knowledge Base</h2>
+              <p>
+                Connect your knowledge base API to manage documents here.
+              </p>
+            </section>
+          )}
 
-      </div>
-
-    </div>
-  );
-}
-
-function SettingsPage() {
-  return (
-    <div className="settings-page">
-
-      <section className="panel settings-section">
-
-        <div className="panel-header">
-
-          <div>
-
-            <h3>
-              AI Agent Settings
-            </h3>
-
-            <p>
-              Configure your voice agent
-            </p>
-
-          </div>
-
+          {page === "Settings" && (
+            <section className="panel">
+              <Settings size={30} />
+              <h2>Settings</h2>
+              <p>Signed in as: {user}</p>
+              <p>Backend API: {API_URL}</p>
+              <button
+                type="button"
+                className="danger-button"
+                onClick={logout}
+              >
+                <LogOut size={17} /> Sign out
+              </button>
+            </section>
+          )}
         </div>
-
-        <div className="settings-list">
-
-          <label className="setting-row">
-
-            <div>
-
-              <strong>
-                Agent enabled
-              </strong>
-
-              <span>
-                Allow the AI agent to handle
-                conversations
-              </span>
-
-            </div>
-
-            <input
-              type="checkbox"
-              defaultChecked
-            />
-
-          </label>
-
-          <label className="setting-row">
-
-            <div>
-
-              <strong>
-                Automatic follow-ups
-              </strong>
-
-              <span>
-                Create follow-up tasks after
-                conversations
-              </span>
-
-            </div>
-
-            <input
-              type="checkbox"
-              defaultChecked
-            />
-
-          </label>
-
-          <label className="setting-row">
-
-            <div>
-
-              <strong>
-                Call recording
-              </strong>
-
-              <span>
-                Save call recordings for review
-              </span>
-
-            </div>
-
-            <input
-              type="checkbox"
-              defaultChecked
-            />
-
-          </label>
-
-        </div>
-
-      </section>
-
-      <section className="panel settings-section">
-
-        <div className="panel-header">
-
-          <div>
-
-            <h3>
-              Business Information
-            </h3>
-
-            <p>
-              Basic business configuration
-            </p>
-
-          </div>
-
-        </div>
-
-        <div className="form-grid">
-
-          <label className="form-field">
-
-            <span>
-              Business Name
-            </span>
-
-            <input
-              placeholder="Your business name"
-            />
-
-          </label>
-
-          <label className="form-field">
-
-            <span>
-              Support Email
-            </span>
-
-            <input
-              placeholder="support@example.com"
-            />
-
-          </label>
-
-          <label className="form-field full-width">
-
-            <span>
-              Business Description
-            </span>
-
-            <textarea
-              rows="4"
-              placeholder="Describe your business..."
-            />
-
-          </label>
-
-        </div>
-
-        <div className="settings-footer">
-
-          <button className="primary-button">
-            Save Settings
-          </button>
-
-        </div>
-
-      </section>
-
+      </main>
     </div>
   );
 }
 
 export default App;
-
-
-
-
